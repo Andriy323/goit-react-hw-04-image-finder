@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Circles } from 'react-loader-spinner';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
@@ -9,96 +9,89 @@ import { getImg } from './shared/shared';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import css from './app.module.css';
-export default class App extends Component {
-  state = {
-    img: [],
-    query: '',
-    showModal: false,
-    imgModal: null,
-    page: 1,
-    loader: false,
-  };
-  componentDidUpdate(prevProps, prevState) {
-    const { page, query } = this.state;
-    if (prevState.page !== page || prevState.query !== query) {
-      this.fetchImg();
+
+const App = () => {
+  const [img, setImg] = useState([]);
+  const [query, setQuery] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [imgModal, setImgModal] = useState(null);
+  const [page, setPage] = useState(1);
+  const [loader, setLoader] = useState(false);
+  const [showBtn, setShowBtn] = useState(false);
+  const PER_PAGE = 12;
+
+  useEffect(() => {
+    if (!query) {
+      return;
     }
-  }
+    const fetchImg = async () => {
+      setShowBtn(false);
+      setLoader(true);
 
-  onSubmit = data => {
-    this.setState({
-      query: data,
-      page: 1,
-      img: [],
-    });
-  };
-  totalHits = 0;
-  perPage = 12;
+      try {
+        const data = await getImg(query, PER_PAGE, page);
 
-  loadImg = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
-  };
+        if (data.total && page === 1) {
+          toast.success(`Found ${data.totalHits} images`);
+        }
+        if (!data.total) {
+          toast.error('Nothing found. Repeat the search!');
+        }
+        if (page < data.totalHits / PER_PAGE) {
+          setShowBtn(true);
+        }
 
-  async fetchImg() {
-    this.setState({ loader: true });
-    const { query, page } = this.state;
+        setImg(prevImg => [...prevImg, ...data.hits]);
+      } catch (error) {
+        toast.error('Oooops.... Repeat the search!');
+      } finally {
+        setLoader(false);
+        setShowBtn(true);
+      }
+    };
+    fetchImg();
+  }, [query, page, PER_PAGE]);
 
-    try {
-      const data = await getImg(query, this.perPage, page);
-
-  
-if(data.total && page ===1) {toast.success(`Found ${data.totalHits} images`)}
-if(!data.total) toast.error('Nothing found. Repeat the search!');
-
-      
-      this.totalHits = data.totalHits;
-      this.setState({ img: [...this.state.img, ...data.hits] });
-    } catch (error) {
-      toast.error('Oooops.... Repeat the search!');
-    } finally {
-      this.setState({ loader: false });
+  const onSubmit = data => {
+    if (data === query) {
+      return toast.warning(`
+      You are duplicating the request "${data}"!`);
     }
-  }
-
-  showImgModal = imgLarge => {
-    this.setState({
-      showModal: true,
-      imgModal: imgLarge,
-    });
-    document.body.style.overflow = "hidden"
-
+    setImg([]);
+    setPage(1);
+    setQuery(data);
   };
 
-  modalClose = () => {
-    this.setState({
-      showModal: false,
-      imgModal: null,
-    });
-    document.body.style.overflow = ""
-
+  const loadImg = () => {
+    setPage(prevState => prevState + 1);
   };
 
-  render() {
-    const { img, showModal, imgModal, page, loader } = this.state;
-    const { onSubmit, showImgModal, modalClose, loadImg, totalHits, perPage } =
-      this;
-    return (
-      <>
-        <Searchbar onSubmitForm={onSubmit} />
-        <ImageGallery img={img} showImgModal={showImgModal} />
-        {!loader && img.length !== 0 && page < totalHits / perPage && (
-          <Button onClick={loadImg} />
-        )}
-        {showModal && (
-          <Modal close={modalClose}>
-            <ImgDetails urlImg={imgModal} />
-          </Modal>
-        )}
-        <Circles wrapperClass={css.loader} visible={loader} />
-        <ToastContainer />
-      </>
-    );
-  }
-}
+  const showImgModal = imgLarge => {
+    setShowModal(true);
+    setImgModal(imgLarge);
+    document.body.style.overflow = 'hidden';
+  };
+  const modalClose = () => {
+    setShowModal(false);
+    setImgModal(null);
+
+    document.body.style.overflow = '';
+  };
+
+  return (
+    <>
+      <Searchbar onSubmitForm={onSubmit} />
+      <ImageGallery img={img} showImgModal={showImgModal} />
+      {img.length !== 0 && showBtn && <Button onClick={loadImg} />}
+      {showModal && (
+        <Modal close={modalClose}>
+          <ImgDetails urlImg={imgModal} />
+        </Modal>
+      )}
+      <Circles wrapperClass={css.loader} visible={loader} />
+      <ToastContainer />
+    </>
+  );
+};
+
+export default App;
