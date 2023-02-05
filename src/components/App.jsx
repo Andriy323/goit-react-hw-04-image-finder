@@ -86,7 +86,7 @@ if(!data.total) toast.error('Nothing found. Repeat the search!');
       this;
     return (
       <>
-        <Searchbar onSubmit={onSubmit} />
+        <Searchbar onSubmitForm={onSubmit} />
         <ImageGallery img={img} showImgModal={showImgModal} />
         {!loader && img.length !== 0 && page < totalHits / perPage && (
           <Button onClick={loadImg} />
