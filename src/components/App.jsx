@@ -30,14 +30,13 @@ const App = () => {
 
       try {
         const data = await getImg(query, PER_PAGE, page);
-
         if (data.total && page === 1) {
           toast.success(`Found ${data.totalHits} images`);
         }
         if (!data.total) {
           toast.error('Nothing found. Repeat the search!');
         }
-        if (page < data.totalHits / PER_PAGE) {
+        if (page < Math.ceil(data.totalHits / PER_PAGE)) {
           setShowBtn(true);
         }
 
@@ -46,7 +45,6 @@ const App = () => {
         toast.error('Oooops.... Repeat the search!');
       } finally {
         setLoader(false);
-        setShowBtn(true);
       }
     };
     fetchImg();
